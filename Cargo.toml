@@ -1,0 +1,7 @@
+[package]
+name = "kallisto_indexer"
+version = "0.1.0"
+authors = ["Rhys Newell <rhys.newell@uqconnect.edu.au>"]
+edition = "2018"
+
+[dependencies]
