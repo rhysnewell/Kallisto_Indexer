@@ -1,7 +1,21 @@
 [package]
 name = "kallisto_indexer"
 version = "0.1.0"
-authors = ["Rhys Newell <rhys.newell@uqconnect.edu.au>"]
-edition = "2018"
+authors = ["Rhys Newell <r.newell@uq.edu.au>"]
+license = "GPL-3.0"
+description = "File parser to Kallisto"
+readme = "README.md"
 
 [dependencies]
+bio = "0.20.*"
+rust-htslib = {git = "https://github.com/rust-bio/rust-htslib"}
+clap = "2.*"
+log = "0.3.*"
+env_logger = "0.4.*"
+nix = "0.11.*"
+tempdir = "0.3.*"
+csv = "1"
+
+[dev-dependencies]
+assert_cli = "0.6.*"
+tempfile = "3.0.*"
