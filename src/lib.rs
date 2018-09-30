@@ -13,8 +13,8 @@ extern crate log;
 extern crate rust_htslib;
 extern crate env_logger;
 extern crate nix;
-extern crate tempdir;
 
+use std::str;
 use std::path::Path;
 use genomes_and_contigs::GenomesAndContigs;
 
@@ -22,10 +22,10 @@ use genomes_and_contigs::GenomesAndContigs;
 
 pub fn read_genome_fasta_files(fasta_file_paths: &[&str]) -> GenomesAndContigs {
     let mut contig_to_genome = GenomesAndContigs::new();
-
+    let mut reader;
     for file in fasta_file_paths {
         let path = Path::new(*file);
-        let reader = bio::io::fasta::Reader::from_file(path)
+        reader = bio::io::fasta::Reader::from_file(path)
             .expect(&format!("Unable to read fasta file {}", file));
 
         let genome_name = String::from(
@@ -37,12 +37,11 @@ pub fn read_genome_fasta_files(fasta_file_paths: &[&str]) -> GenomesAndContigs {
             panic!("The genome name {} was derived from >1 file", genome_name);
         }
         let genome_index = contig_to_genome.establish_genome(genome_name);
-        for record in reader.records() {
-            let contig = String::from(
-                record
-                    .expect(&format!("Failed to parse contig name in fasta file {:?}", path))
-                    .id());
-            contig_to_genome.insert(contig, genome_index);
+        let records = reader.records();
+        for record in records {
+            let genome = record.unwrap();
+            let genome = genome.seq();
+            contig_to_genome.insert(str::from_utf8(genome).unwrap().to_string(), genome_index);
         }
     }
     return contig_to_genome;

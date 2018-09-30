@@ -5,22 +5,24 @@ extern crate clap;
 use clap::*;
 extern crate rust_htslib;
 extern crate nix;
-extern crate tempdir;
+extern crate tempfile;
 extern crate csv;
 
+#[macro_use]
 extern crate log;
 use log::LogLevelFilter;
 extern crate env_logger;
 use env_logger::LogBuilder;
 
-use tempfile::tempdir;
+use tempfile::{tempfile, tempdir, Builder};
+use std::io::{self, Write};
 use std::env;
 use std::str;
-use std::process;
+use std::process::{self, Command};
 use std::path::Path;
 use std::error::Error;
 use std::ffi::OsString;
-use std::fs::File;
+use std::fs::{self, File};
 
 fn main() {
 
@@ -34,6 +36,7 @@ fn main() {
         for (key, value) in genomes_and_contigs.contig_to_genome{
             genomes_string = [genomes_string, key].join("N");
         }
+        run_kallisto(genomes_string, m.clone());
     } else if m.is_present("fasta-directory") {
         let file_path = m.value_of("fasta-directory").unwrap();
         let mut rdr = csv::Reader::from_path(file_path);
@@ -52,48 +55,60 @@ fn main() {
         for (key, value) in genomes_and_contigs.contig_to_genome{
             genomes_string = [genomes_string, key].join("N");
         }
+        run_kallisto(genomes_string, m.clone());
 
     }
-    let dir = tempdir();
-    let temp_file_path = dir.path().join("temp_genome.fasta");
-    let mut temp_file = File::create(temp_file_path);
-    writeln!(temp_file, genomes_string);
-    if m.is_present("k-mer-size"){
-        Command::new("kallisto")
-                .arg("index")
-                .arg("-i")
-                .arg(temp_file)
-                .arg("-k")
-                .arg(m.value_of("k-mer-size").unwrap())
-    }else{
-        Command::new("kallisto")
-                .arg("index")
-                .arg("-i")
-                .arg(temp_file)
-    }
-    drop(temp_file);
-    dir.close();
+    
 }
+
+fn run_kallisto(genomes_string: String, matches: ArgMatches) -> Result<()>{
+        let m = matches;
+        let dir = Builder::new().tempdir_in("./")?;
+        // info!("Temp Path {:?}", dir.unwrap().path());
+        let temp_file_path = dir.path().join("temp_genome.fasta");
+        let mut temp_file = File::create(temp_file_path.clone())?;
+        let mut output;
+        println!("{}", &genomes_string);
+        writeln!(temp_file, "{}", genomes_string)?;
+        if m.is_present("k-mer-size"){
+            output = Command::new("kallisto")
+                    .arg("index")
+                    .arg("-i")
+                    .arg(temp_file_path)
+                    .arg("-k")
+                    .arg(m.value_of("k-mer-size").unwrap())
+                    .output();
+        }else{
+            output = Command::new("kallisto")
+                    .arg("index")
+                    .arg("-i")
+                    .arg(temp_file_path)
+                    .output();
+        }
+        println!("stdout: {}", String::from_utf8_lossy(&output.unwrap().stdout));
+        drop(temp_file);
+        Ok(dir.close()?)
+    }
 
 fn build_cli() -> App<'static, 'static> {
 
     return App::new("kallisto_indexer")
         .author("Rhys J. P. Newell <r.newell near uq.edu.au>")
         .about("Mapping coverage analysis for metagenomics")
-        .args_from_usage("-v, --verbose       'Print extra debug logging information'
-             -q, --quiet         'Unless there is an error, do not print logging information'")
         .help("")
         .arg(Arg::with_name("fasta-files")
                 .short("f")
                 .long("fasta-files")
                 .conflicts_with("fasta-directory")
                 .multiple(true)
-                .takes_value(true))
+                .takes_value(true)
+                .required(true))
         .arg(Arg::with_name("threads")
                 .short("-t")
                 .long("threads")
                 .default_value("1")
-                .takes_value(true))
+                .takes_value(true)
+                .required(true))
         .arg(Arg::with_name("fasta-directory")
                 .short("d")
                 .long("fasta-directory")
