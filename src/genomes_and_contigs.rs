@@ -4,7 +4,7 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub struct GenomesAndContigs {
     pub genomes: Vec<String>,
-    pub contig_to_genome: HashMap<String, usize>
+    pub contig_to_genome: Vec<String>
 }
 
 
@@ -12,7 +12,7 @@ impl GenomesAndContigs {
     pub fn new() -> GenomesAndContigs {
         GenomesAndContigs {
             genomes: vec!(),
-            contig_to_genome: HashMap::new()
+            contig_to_genome: vec!()
         }
     }
 
@@ -22,29 +22,8 @@ impl GenomesAndContigs {
         return index
     }
 
-    pub fn insert(&mut self, contig_name: String, genome_index: usize) {
-        self.contig_to_genome.insert(contig_name, genome_index);
-    }
-
-    pub fn genome_index(&self, genome_name: &String) -> Option<usize> {
-        match find_first(self.genomes.as_slice(), genome_name.to_string()) {
-            Ok(index) => Some(index),
-            Err(_) => None
-        }
-    }
-
-    pub fn genome_of_contig(&self, contig_name: &String) -> Option<&String> {
-        match self.contig_to_genome.get(contig_name) {
-            Some(index) => Some(&self.genomes[*index]),
-            None => None
-        }
-    }
-
-    pub fn genome_index_of_contig(&self, contig_name: &String) -> Option<usize> {
-        match self.contig_to_genome.get(contig_name) {
-            Some(index) => Some(*index),
-            None => None
-        }
+    pub fn insert(&mut self, contig_name: String) {
+        self.contig_to_genome.push(contig_name);
     }
 }
 /// Finds the first occurence of element in a slice

@@ -33,8 +33,9 @@ fn main() {
     if m.is_present("fasta-files"){
         let genome_fasta_files: Vec<&str> = m.values_of("fasta-files").unwrap().collect();
         genomes_and_contigs = kallisto_indexer::read_genome_fasta_files(&genome_fasta_files);
-        for (key, value) in genomes_and_contigs.contig_to_genome{
-            genomes_string = [genomes_string, key].join("N");
+        for (i, value) in genomes_and_contigs.contig_to_genome.iter().enumerate(){
+            genomes_string = [genomes_string, value.clone()].join(&format!(">{}\n", genomes_and_contigs.genomes[i]));
+            genomes_string.push_str("\n")
         }
         run_kallisto(genomes_string, m.clone());
     } else if m.is_present("fasta-directory") {
@@ -52,8 +53,9 @@ fn main() {
             strs.push(f);
         }
         genomes_and_contigs = kallisto_indexer::read_genome_fasta_files(&strs);
-        for (key, value) in genomes_and_contigs.contig_to_genome{
-            genomes_string = [genomes_string, key].join("N");
+        for (i, value) in genomes_and_contigs.contig_to_genome.iter().enumerate(){
+            genomes_string = [genomes_string, value.clone()].join(&format!(">{}\n", genomes_and_contigs.genomes[i]));
+            genomes_string.push_str("\n")
         }
         run_kallisto(genomes_string, m.clone());
 
@@ -63,30 +65,43 @@ fn main() {
 
 fn run_kallisto(genomes_string: String, matches: ArgMatches) -> Result<()>{
         let m = matches;
-        let dir = Builder::new().tempdir_in("./")?;
+        let mkdir = Command::new("mkdir")
+                .arg(format!("{}", m.value_of("output").unwrap()))
+                .output()
+                .expect("Failed");
+        println!("stderr mkdir: {}", String::from_utf8(mkdir.stderr).unwrap());
+        let dir = Builder::new().tempdir_in(format!("{}", m.value_of("output").unwrap()))?;
         // info!("Temp Path {:?}", dir.unwrap().path());
         let temp_file_path = dir.path().join("temp_genome.fasta");
         let mut temp_file = File::create(temp_file_path.clone())?;
         let mut output;
         println!("{}", &genomes_string);
-        writeln!(temp_file, "{}", genomes_string)?;
+        temp_file.write_all(genomes_string.as_bytes())?;
+        let touch = Command::new("touch")
+                .arg(format!("{}/genomes.idx", m.value_of("output").unwrap()))
+                .output()
+                .expect("Failed");
+        println!("stderr touch: {}", String::from_utf8(touch.stderr).unwrap());
         if m.is_present("k-mer-size"){
             output = Command::new("kallisto")
                     .arg("index")
-                    .arg("-i")
+                    .arg(format!("--index={}/genomes.idx", m.value_of("output").unwrap()))
+                    .arg(format!("--kmer-size={}", m.value_of("k-mer-size").unwrap()))
                     .arg(temp_file_path)
-                    .arg("-k")
-                    .arg(m.value_of("k-mer-size").unwrap())
-                    .output();
+                    .output()
+                    .expect("failed to execute process");
         }else{
+            
             output = Command::new("kallisto")
                     .arg("index")
-                    .arg("-i")
+                    .arg(format!("--index={}/genomes.idx", m.value_of("output").unwrap()))
                     .arg(temp_file_path)
-                    .output();
+                    .output()
+                    .expect("failed to execute process");
         }
-        println!("stdout: {}", String::from_utf8_lossy(&output.unwrap().stdout));
-        drop(temp_file);
+        println!("stdout: {}", String::from_utf8_lossy(&output.stdout));
+        println!("stdout: {}", String::from_utf8_lossy(&output.stderr));
+        // drop(temp_file);
         Ok(dir.close()?)
     }
 
@@ -119,6 +134,11 @@ fn build_cli() -> App<'static, 'static> {
                 .long("k-mer-size")
                 .takes_value(true)
                 .required(false))
+        .arg(Arg::with_name("output")
+                .short("o")
+                .long("output")
+                .takes_value(true)
+                .required(true))
         .arg(Arg::with_name("verbose")
                 .short("v")
                 .long("verbose"))
