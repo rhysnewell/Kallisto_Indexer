@@ -13,6 +13,7 @@ use log::LogLevelFilter;
 extern crate env_logger;
 use env_logger::LogBuilder;
 
+use tempfile::tempdir;
 use std::env;
 use std::str;
 use std::process;
@@ -26,9 +27,13 @@ fn main() {
     let mut app = build_cli();
     let m = app.clone().get_matches();
     let genomes_and_contigs;
+    let mut genomes_string = String::new();
     if m.is_present("fasta-files"){
         let genome_fasta_files: Vec<&str> = m.values_of("fasta-files").unwrap().collect();
         genomes_and_contigs = kallisto_indexer::read_genome_fasta_files(&genome_fasta_files);
+        for (key, value) in genomes_and_contigs.contig_to_genome{
+            genomes_string = [genomes_string, key].join("N");
+        }
     } else if m.is_present("fasta-directory") {
         let file_path = m.value_of("fasta-directory").unwrap();
         let mut rdr = csv::Reader::from_path(file_path);
@@ -44,12 +49,30 @@ fn main() {
             strs.push(f);
         }
         genomes_and_contigs = kallisto_indexer::read_genome_fasta_files(&strs);
-        let mut genomes_string = String::new();
         for (key, value) in genomes_and_contigs.contig_to_genome{
             genomes_string = [genomes_string, key].join("N");
         }
 
     }
+    let dir = tempdir();
+    let temp_file_path = dir.path().join("temp_genome.fasta");
+    let mut temp_file = File::create(temp_file_path);
+    writeln!(temp_file, genomes_string);
+    if m.is_present("k-mer-size"){
+        Command::new("kallisto")
+                .arg("index")
+                .arg("-i")
+                .arg(temp_file)
+                .arg("-k")
+                .arg(m.value_of("k-mer-size").unwrap())
+    }else{
+        Command::new("kallisto")
+                .arg("index")
+                .arg("-i")
+                .arg(temp_file)
+    }
+    drop(temp_file);
+    dir.close();
 }
 
 fn build_cli() -> App<'static, 'static> {
@@ -76,6 +99,11 @@ fn build_cli() -> App<'static, 'static> {
                 .long("fasta-directory")
                 .conflicts_with("fasta-files")
                 .takes_value(true))
+        .arg(Arg::with_name("k-mer-size")
+                .short("k")
+                .long("k-mer-size")
+                .takes_value(true)
+                .required(false))
         .arg(Arg::with_name("verbose")
                 .short("v")
                 .long("verbose"))
