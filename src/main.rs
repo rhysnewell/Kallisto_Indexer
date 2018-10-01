@@ -56,7 +56,11 @@ fn main() {
             // println!("{}",format!("{:?}", record));
             let file = &record[1];
             // let mut s = String::from(file);
-            genome_fasta_files.push(file.to_string());
+            let file_split: Vec<&str> = file.split("/").collect();
+            println!("{}",format!("{:?}", file_split));
+            let file_name = format!("{}_genomic.fna", file_split.last().unwrap());
+            println!("{}",format!("{:?}", file_name));
+            genome_fasta_files.push([file.to_string(), file_name].join("/"));
         }
         let mut strs: Vec<&str> = vec!();
         for f in &genome_fasta_files {
