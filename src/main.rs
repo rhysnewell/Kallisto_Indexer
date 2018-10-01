@@ -15,7 +15,7 @@ extern crate env_logger;
 use env_logger::LogBuilder;
 
 use tempfile::{tempfile, tempdir, Builder};
-use std::io::{self, Write};
+use std::io::{self, Write, Read};
 use std::env;
 use std::str;
 use std::process::{self, Command};
@@ -23,6 +23,7 @@ use std::path::Path;
 use std::error::Error;
 use std::ffi::OsString;
 use std::fs::{self, File};
+use csv::ReaderBuilder;
 
 fn main() {
 
@@ -39,19 +40,29 @@ fn main() {
         }
         run_kallisto(genomes_string, m.clone());
     } else if m.is_present("fasta-directory") {
-        let file_path = m.value_of("fasta-directory").unwrap();
-        let mut rdr = csv::Reader::from_path(file_path);
-        let mut genome_fasta_files: Vec<String> = vec!();
-        for line in rdr.unwrap().records() {
+        // println!("{}",format!("{:?}", m.value_of("fasta-directory").unwrap()));
+        let mut file_path = File::open(m.value_of("fasta-directory").unwrap()).unwrap();
+        // println!("{}",format!("{:?}", file_path));
+        let mut contents = String::new();
+        file_path.read_to_string(&mut contents);
+        // println!("{}",format!("{:?}", contents));
+        let mut rdr = csv::ReaderBuilder::new()
+                                        .delimiter(b'\t')
+                                        .has_headers(false)
+                                        .from_reader(contents.as_bytes());
+        let mut genome_fasta_files: Vec<String> = Vec::new();
+        for line in rdr.records() {
             let record = line.unwrap();
+            // println!("{}",format!("{:?}", record));
             let file = &record[1];
-            let mut s = String::from(file);
-            genome_fasta_files.push(s);
+            // let mut s = String::from(file);
+            genome_fasta_files.push(file.to_string());
         }
         let mut strs: Vec<&str> = vec!();
         for f in &genome_fasta_files {
             strs.push(f);
         }
+        // info!("{:?}", &strs);
         genomes_and_contigs = kallisto_indexer::read_genome_fasta_files(&strs);
         for (i, value) in genomes_and_contigs.contig_to_genome.iter().enumerate(){
             genomes_string = [genomes_string, value.clone()].join(&format!(">{}\n", genomes_and_contigs.genomes[i]));
@@ -75,7 +86,7 @@ fn run_kallisto(genomes_string: String, matches: ArgMatches) -> Result<()>{
         let temp_file_path = dir.path().join("temp_genome.fasta");
         let mut temp_file = File::create(temp_file_path.clone())?;
         let mut output;
-        println!("{}", &genomes_string);
+        // println!("{}", &genomes_string);
         temp_file.write_all(genomes_string.as_bytes())?;
         let touch = Command::new("touch")
                 .arg(format!("{}/genomes.idx", m.value_of("output").unwrap()))
