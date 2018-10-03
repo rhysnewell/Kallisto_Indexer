@@ -29,13 +29,15 @@ use csv::{Writer, ReaderBuilder};
 fn main() {
 
     let mut app = build_cli();
-    let m = app.clone().get_matches();
+    let matches = app.clone().get_matches();
 
-    match m.subcommand_name(){
+    match matches.subcommand_name(){
         Some("kallisto") => {
+            let m = matches.subcommand_matches("kallisto").unwrap();
             let genomes_and_contigs;
             let mut genomes_string = String::new();
             if m.is_present("fasta-files"){
+                println!("Here first!");
                 let genome_fasta_files: Vec<&str> = m.values_of("fasta-files").unwrap().collect();
                 genomes_and_contigs = kallisto_indexer::read_genome_fasta_files(&genome_fasta_files);
                 for (i, value) in genomes_and_contigs.contig_to_genome.iter().enumerate(){
@@ -44,6 +46,7 @@ fn main() {
                 }
                 run_kallisto(genomes_string, m.clone());
             } else if m.is_present("fasta-directory") {
+                println!("Here second!");
                 // println!("{}",format!("{:?}", m.value_of("fasta-directory").unwrap()));
                 let mut file_path = File::open(m.value_of("fasta-directory").unwrap()).unwrap();
                 // println!("{}",format!("{:?}", file_path));
@@ -61,9 +64,9 @@ fn main() {
                     let file = &record[1];
                     // let mut s = String::from(file);
                     let file_split: Vec<&str> = file.split("/").collect();
-                    println!("{}",format!("{:?}", file_split));
+                    // println!("{}",format!("{:?}", file_split));
                     let file_name = format!("{}_genomic.fna", file_split.last().unwrap());
-                    println!("{}",format!("{:?}", file_name));
+                    // println!("{}",format!("{:?}", file_name));
                     genome_fasta_files.push([file.to_string(), file_name].join("/"));
                     
                     
@@ -84,9 +87,9 @@ fn main() {
 
         }
         Some("bifrost") =>{
-            let mut genomes_string = String::new();    
-            // println!("{}",format!("{:?}", m.value_of("fasta-directory").unwrap()));
-            let mut file_path = File::open(m.value_of("fasta-directory").unwrap()).unwrap();
+            let m = matches.subcommand_matches("bifrost").unwrap();
+            // println!("{}",format!("{:?}", m.value_of("fasta-directory")));
+            let mut file_path = File::open(m.value_of("fasta-directory").unwrap().to_string()).unwrap();
             // println!("{}",format!("{:?}", file_path));
             let mut contents = String::new();
             file_path.read_to_string(&mut contents);
@@ -117,9 +120,9 @@ fn main() {
                 let file = &record[1];
                 // let mut s = String::from(file);
                 let file_split: Vec<&str> = file.split("/").collect();
-                println!("{}",format!("{:?}", file_split));
+                // println!("{}",format!("{:?}", file_split));
                 let file_name = format!("{}_genomic.fna", file_split.last().unwrap());
-                println!("{}",format!("{:?}", file_name));
+                // println!("{}",format!("{:?}", file_name));
                 if RepRecord.contains(&record[0]){
                     rep_fasta_files.push([file.to_string(), file_name].join("/"));
                 }else{
@@ -230,7 +233,13 @@ fn build_cli() -> App<'static, 'static> {
     return App::new("kallisto_indexer")
         .author("Rhys J. P. Newell <r.newell near uq.edu.au>")
         .about("Mapping coverage analysis for metagenomics")
-        .help("")
+        .help("
+        usage: file parser <subcommand>
+
+        modes:
+        \tkallisto\t parse genome files to kallisto
+        \tbifrost\t parse genomes files to bifrost
+            ")
         .subcommand(
             SubCommand::with_name("bifrost")
                 .about("Run bifrost with GTDB files")
@@ -239,16 +248,17 @@ fn build_cli() -> App<'static, 'static> {
                         .long("threads")
                         .default_value("1")
                         .takes_value(true)
-                        .required(true))
+                        .required(false))
                 .arg(Arg::with_name("fasta-directory")
                         .short("d")
                         .long("fasta-directory")
-                        .takes_value(true))
+                        .takes_value(true)
+                        .required(true))
                 .arg(Arg::with_name("representatives")
                         .short("r")
                         .long("representatives")
                         .takes_value(true)
-                        .required(false))
+                        .required(true))
                 .arg(Arg::with_name("k-mer-size")
                         .short("k")
                         .long("k-mer-size")
@@ -274,18 +284,19 @@ fn build_cli() -> App<'static, 'static> {
                         .conflicts_with("fasta-directory")
                         .multiple(true)
                         .takes_value(true)
-                        .required(true))
+                        .required_unless("fasta-directory"))
                 .arg(Arg::with_name("threads")
                         .short("-t")
                         .long("threads")
                         .default_value("1")
                         .takes_value(true)
-                        .required(true))
+                        .required(false))
                 .arg(Arg::with_name("fasta-directory")
                         .short("d")
                         .long("fasta-directory")
                         .conflicts_with("fasta-files")
-                        .takes_value(true))
+                        .takes_value(true)
+                        .required_unless("fasta-files"))
                 .arg(Arg::with_name("k-mer-size")
                         .short("k")
                         .long("k-mer-size")
