@@ -268,6 +268,26 @@ pub fn read_genome_fasta_files(fasta_file_paths: &[&str]) -> GenomesAndContigs {
 }
 
 
+pub fn read_genome_fasta_files_as_one_genome(fasta_file_paths: &[&str]) -> GenomesAndContigs {
+    let mut contig_to_genome = GenomesAndContigs::new();
+    let mut reader;
+    for file in fasta_file_paths {
+        let path = Path::new(*file);
+        reader = Reader::from_file(path);
+        let mut name = file.to_string();
+//        name = name.last().unwrap().split(".");
+        contig_to_genome.genomes.push(name);
+        let records = reader.unwrap().records();
+        let mut genome = Vec::new();
+        for record in records {
+            let contig = record.unwrap();
+            genome.push(contig.seq().to_string());
+        }
+        contig_to_genome.contig_to_genome.push(genome.join(""));
+    }
+    return contig_to_genome;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
