@@ -74,7 +74,7 @@ impl GenomesAndContigs {
                 value_vec[index] = *value;
             }
         }
-        for (key, value) in full_kmer_map{
+        for (key, value) in full_kmer_map.drain(){
             print!("{}", key);
             for v in value{
                 print!("\t{}", v);
