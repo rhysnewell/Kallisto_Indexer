@@ -147,7 +147,7 @@ fn main() {
                 let genome_fasta_files: Vec<&str> = m.values_of("fasta-files").unwrap().collect();
                 genomes_and_contigs = kmer_indexer::read_genome_fasta_files_as_one_genome(&genome_fasta_files);
                 genomes_and_contigs.establish_kmers(m.value_of("k-mer-size").unwrap().parse::<usize>().unwrap());
-                genomes_and_contigs.get_kmers();
+//                genomes_and_contigs.get_kmers();
             } else if m.is_present("fasta-directory") {
                 // println!("{}",format!("{:?}", m.value_of("fasta-directory").unwrap()));
                 let mut file_path = File::open(m.value_of("fasta-directory").unwrap()).unwrap();
@@ -178,7 +178,7 @@ fn main() {
                     // info!("{:?}", &strs);
                     genomes_and_contigs = kmer_indexer::read_genome_fasta_files_as_one_genome(&strs);
                     genomes_and_contigs.establish_kmers(m.value_of("k-mer-size").unwrap().parse::<usize>().unwrap());
-                    genomes_and_contigs.get_kmers();
+//                    genomes_and_contigs.get_kmers();
                 }
             }
         }

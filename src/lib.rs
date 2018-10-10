@@ -270,10 +270,10 @@ pub fn read_genome_fasta_files(fasta_file_paths: &[&str]) -> GenomesAndContigs {
 
 pub fn read_genome_fasta_files_as_one_genome(fasta_file_paths: &[&str]) -> GenomesAndContigs {
     let mut contig_to_genome = GenomesAndContigs::new();
-    let mut reader;
+//    let mut reader;
     for file in fasta_file_paths {
         let path = Path::new(*file);
-        reader = Reader::from_file(path);
+        let mut reader = Reader::from_file(path);
         let mut name = file.to_string();
 //        name = name.last().unwrap().split(".");
         contig_to_genome.genomes.push(name);
@@ -297,7 +297,7 @@ mod tests {
         let mut contig_to_genome = GenomesAndContigs::new();
         let genome = String::from("genome0");
         let index = contig_to_genome.establish_genome(genome);
-        contig_to_genome.insert(String::from("contig1"), index);
+        contig_to_genome.insert(String::from("contig1"));
         assert_eq!(
             String::from("genome0"),
             *(contig_to_genome.genome_of_contig(&String::from("contig1")).unwrap()));

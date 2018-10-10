@@ -7,10 +7,12 @@ use std::str;
 #[derive(Debug)]
 pub struct GenomesAndContigs {
     pub genomes: Vec<String>,
-    pub contig_to_genome: Vec<String>,
-    pub kmers: HashMap<String, Vec<i32>>
+    pub contig_to_genome: Vec<String>
 }
 
+pub struct KmerMap{
+    pub kmers: HashMap<String, Vec<u32>>
+}
 
 
 impl GenomesAndContigs {
@@ -18,7 +20,6 @@ impl GenomesAndContigs {
         GenomesAndContigs {
             genomes: vec!(),
             contig_to_genome: vec!(),
-            kmers: HashMap::new()
         }
     }
 
@@ -28,9 +29,11 @@ impl GenomesAndContigs {
         return index
     }
 
-    pub fn establish_kmers(&mut self, kmer_size: usize){
-
-        for (i, genome) in self.contig_to_genome.clone().iter().enumerate(){
+    pub fn establish_kmers(self, kmer_size: usize) {
+        let mut kmer_map = KmerMap{
+                    kmers: HashMap::new()
+                };
+        for (i, genome) in self.contig_to_genome.iter().enumerate(){
             let mut start = 0;
             let mut stop = start + kmer_size;
             let mut full_gen = Vec::new();
@@ -38,10 +41,12 @@ impl GenomesAndContigs {
             for line in gen{
                 full_gen.push(line);
             }
-            let mut joined_genome = full_gen.join("");
+            let mut joined_genome = full_gen.join("").to_uppercase();
             while stop <= joined_genome.len() as usize{
                 let kmer = &joined_genome.as_bytes()[start..stop];
-                let value_vec = self.kmers.entry(str::from_utf8(kmer).unwrap().to_string()).or_insert(vec![0; self.genomes.len()]);
+                let value_vec = kmer_map.kmers.entry(str::from_utf8(&kmer)
+                                                        .unwrap().to_string())
+                                                        .or_insert(vec![0; self.genomes.len()]);
                 value_vec[i] += 1;
 //                if self.kmers.contains_key(str::from_utf8(kmer).unwrap()){
 //                    *self.kmers[i].get_mut(str::from_utf8(kmer).unwrap()).unwrap() += 1;
@@ -52,19 +57,12 @@ impl GenomesAndContigs {
                 stop += 1;
             }
         }
-    }
-
-    pub fn insert(&mut self, contig_name: String) {
-        self.contig_to_genome.push(contig_name);
-    }
-
-    pub fn get_kmers(&mut self){
         print!("K-Mer ");
-        for genome in self.genomes.clone(){
+        for genome in self.genomes{
             print!("\t{} ", genome.split("/").collect::<Vec<_>>().last().unwrap());
         }
         print!("\n");
-        for (key, value) in self.kmers.drain(){
+        for (key, value) in kmer_map.kmers.drain(){
             print!("{} ", key);
             for v in value{
                 print!("\t{} ", v);
@@ -72,6 +70,25 @@ impl GenomesAndContigs {
             print!("\n")
         }
     }
+
+    pub fn insert(&mut self, contig_name: String) {
+        self.contig_to_genome.push(contig_name);
+    }
+
+//    pub fn get_kmers(&mut self){
+//        print!("K-Mer ");
+//        for genome in self.genomes.clone(){
+//            print!("\t{} ", genome.split("/").collect::<Vec<_>>().last().unwrap());
+//        }
+//        print!("\n");
+//        for (key, value) in self.kmers.drain(){
+//            print!("{} ", key);
+//            for v in value{
+//                print!("\t{} ", v);
+//            }
+//            print!("\n")
+//        }
+//    }
 }
 /// Finds the first occurence of element in a slice
 fn find_first<T>(slice: &[T], element: T) -> Result<usize, &'static str>
